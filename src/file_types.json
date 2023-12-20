@@ -1,0 +1,22 @@
+[
+    {
+        "id": 1,
+        "name": "jpg"
+    },
+    {
+        "id": 2,
+        "name": "jpeg"
+    },
+    {
+        "id": 3,
+        "name": "png"
+    },
+    {
+        "id": 4,
+        "name": "pdf"
+    },
+    {
+        "id": 5,
+        "name": "docx"
+    }
+]
