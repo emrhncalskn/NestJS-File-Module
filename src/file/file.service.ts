@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { FileTypeDto, FileDto } from './dto/file.dto';
 import { FileDestinationConstant, FileTypeConstant } from './options/file.constant';
 import * as fs from 'fs';
@@ -49,11 +49,9 @@ export class FileService {
         file.alt = await this.fillEmpty(file.originalname);
 
         const findType = await this.findFileType(type);
-        if (!findType) { return 404; }
+        if (!findType) { throw new HttpException('File not found', HttpStatus.NOT_FOUND); }
 
-        let path: string; // if there is no type, the path will be the original file type, otherwise the path will be the type in the database.
-        findType.type == type ? path = findType.type : path = type;
-
+        let path = findType.type;
 
         const pathFix = file.path.replace(/\\/g, '/'), oldPath = pathFix.replace(file.filename, '');
         const newPath = `${oldPath}${route}/${path}`;
@@ -65,7 +63,7 @@ export class FileService {
 
         if (!fs.existsSync(newPath)) { fs.mkdirSync(newPath, { recursive: true }); }
         fs.renameSync(`${oldPath}${file.filename}`, `${newPath}/${file.filename}`);
-        return `/${route}/${path}/${file.filename}`
+        return file;
     }
 
     async loadFiles() {
@@ -113,46 +111,90 @@ export class FileService {
 
     async findFileById(id: number) {
         const file = this.files.find((file) => file.id === Number(id));
-        if (!file) return { errorMessage: 'File not found' }
+        if (!file) { throw new HttpException('File not found', HttpStatus.NOT_FOUND); }
         return file;
     }
 
     async findFileType(name: string) {
         const file_type = this.file_type.find((file_type) => file_type.name === name);
-        if (!file_type) return { errorMessage: 'File type not found' }
+        if (!file_type) { throw new HttpException('File type not found', HttpStatus.NOT_FOUND); }
         return file_type;
     }
 
     async getFiles() {
         const files = this.files;
-        if (files.length < 1) return { errorMessage: 'Files not found' }
+        if (files.length < 1) { throw new HttpException('File not found', HttpStatus.NOT_FOUND); }
         return files;
     }
 
     async getFileTypes() {
         const file_types = this.file_type;
+        if (file_types.length < 1) { throw new HttpException('File type not found', HttpStatus.NOT_FOUND); }
         return file_types;
     }
 
     async getFilesByType(type: string) {
         const file_type = await this.findFileType(type);
-        if (!file_type) return { errorMessage: 'File type not found' }
+        if (!file_type) { throw new HttpException('File type not found', HttpStatus.NOT_FOUND); }
         const files = this.files.filter((file) => file.type_id === file_type.id);
-        if (files.length < 1) return { errorMessage: 'Files not found' }
+        if (files.length < 1) { throw new HttpException('File not found', HttpStatus.NOT_FOUND); }
         return files;
     }
 
+    async deleteFolderIfEmpty(folderPath: string) {
+        try {
+            const folderContents = await fsPromises.readdir(folderPath);
+
+            if (folderContents.length === 0) {
+                // If the folder is empty, check the previous folder
+                const parentFolderPath = folderPath.substring(0, folderPath.lastIndexOf('/')); // Path to the previous folder
+                await fsPromises.rm(folderPath, { recursive: true }); // Check the previous folder and delete it if it is empty
+                if (parentFolderPath !== FileDestinationConstant.DEST) { // If the path to the previous folder is not the path to the main folder
+                    await this.deleteFolderIfEmpty(parentFolderPath);
+                }
+            }
+        } catch (error) {
+            console.error('Error while checking and deleting folder:', error);
+        }
+    }
+
     async deleteFile(id: number) {
-        const file = await this.findFileById(id);
-        if (!file) return { errorMessage: 'File not found' }
+        let msg = null;
+        const file: FileDto = await this.findFileById(id);
+        if (!file) { throw new HttpException('File not found', HttpStatus.NOT_FOUND); }
+
+        const path = file.path.replace(/\\/g, '/');
+
         const index = this.files.indexOf(file);
         this.files.splice(index, 1);
         this.saveFiles();
+        console.log(path)
+        const isFileExists = await this.isFileExists(FileDestinationConstant.DEST + path);
+        if (!isFileExists) msg = 'File not found on folder path but succesfully deleted anyway.';
 
-        const path = file.path.replace(/\\/g, '/');
-        fs.unlinkSync(FileDestinationConstant.DEST + path);
+        try { // if someone delete file by manually
+            await fsPromises.unlink(FileDestinationConstant.DEST + path);
+        } catch (error) {
+            msg = 'File not found on folder path but successfully deleted anyway.';
+        }
 
-        return file;
+        // Delete folder and previous folder
+        const folderPath = path.substring(0, path.lastIndexOf('/')); // Get folder path from file path
+        await this.deleteFolderIfEmpty(FileDestinationConstant.DEST + folderPath);
+        if (msg) throw new HttpException(msg, HttpStatus.OK)
+        throw new HttpException('File deleted successfully', HttpStatus.OK);
+    }
+
+    async isFileExists(path: string) {
+        return new Promise((resolve, reject) => {
+            fs.access(path, fs.constants.F_OK, (error) => {
+                if (error) {
+                    resolve(false);
+                } else {
+                    resolve(true);
+                }
+            });
+        });
     }
 
     async convertTurkishWords(text: string) {

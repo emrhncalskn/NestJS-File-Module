@@ -1,1 +1,32 @@
-[{"id":1,"name":"jpg","type":"image"},{"id":2,"name":"jpeg","type":"image"},{"id":3,"name":"png","type":"image"},{"id":4,"name":"pdf","type":"document"},{"id":5,"name":"docx","type":"document"},{"id":6,"name":"xlsx","type":"document"},{"name":"svg","type":"image","id":7},{"name":"sql","type":"file","id":8},{"name":"sql","type":"file","id":9}]
+[
+    {
+        "id": 1,
+        "name": "jpg",
+        "type": "image"
+    },
+    {
+        "id": 2,
+        "name": "jpeg",
+        "type": "image"
+    },
+    {
+        "id": 3,
+        "name": "png",
+        "type": "image"
+    },
+    {
+        "id": 4,
+        "name": "pdf",
+        "type": "document"
+    },
+    {
+        "id": 5,
+        "name": "docx",
+        "type": "document"
+    },
+    {
+        "id": 6,
+        "name": "xlsx",
+        "type": "document"
+    }
+]

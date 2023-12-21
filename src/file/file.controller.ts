@@ -1,10 +1,10 @@
-import { Body, Controller, FileTypeValidator, Get, Param, ParseFilePipe, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, FileTypeValidator, Get, Param, ParseFilePipe, Post, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { FileTypeConstant } from './options/file.constant';
-import { FileTypeDto, FileDto } from './dto/file.dto';
+import { ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { FileTypeDto } from './dto/file.dto';
 import { FileService } from './file.service';
+import { FileTypeConstant } from './options/file.constant';
 import { FileApiOptions, FileUploadOptions } from './options/file.options';
-import { ApiConsumes, ApiBody, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('File')
 @Controller('file')
