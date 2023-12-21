@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { UploadFileDto } from './dto/file.dto';
+import { FileTypeDto, FileDto } from './dto/file.dto';
 import { FileDestinationConstant, FileTypeConstant } from './options/file.constant';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
@@ -15,24 +15,25 @@ export class FileService {
 
     constructor() {
         this.loadFiles();
+        this.loadFileTypes();
     }
 
-    async getFileMenus(type: string) {
+    async listFilePaths(path: string) {
         let documents = [];
 
         try {
             let files = [];
-            if (type == 'all' || type == 'All' || type == 'ALL') {
+            if (path == 'all' || path == 'All' || path == 'ALL') {
                 files = await fsPromises.readdir(FileDestinationConstant.DEST, { recursive: true, encoding: 'utf-8' });
                 files.forEach(file => {
-                    const new_path = file.replace(/\\/g, '/'); // Burada da \\ getiriyordu onları / ile değiştirdik
-                    if (new_path.split('/').length < 2) { return; } //  /xx/xx.png şeklinde olanları gostersin diye tek '/' olanları göstermemesını sagladık
+                    const new_path = file.replace(/\\/g, '/');
+                    if (new_path.split('/').length < 2) { return; }
                     documents.push({ file: `/${new_path}` });
                 });
             } else {
-                files = await fsPromises.readdir(FileDestinationConstant.DEST + type);
+                files = await fsPromises.readdir(FileDestinationConstant.DEST + path);
                 files.forEach(file => {
-                    documents.push({ file: `/${type}/${file}` });
+                    documents.push({ file: `/${path}/${file}` });
                 });
             }
 
@@ -44,32 +45,7 @@ export class FileService {
         }
     }
 
-    /* async getImageMenus(type: string) {
-         let images = [];
- 
-         try {
-             let files = [];
-             if (type == 'all' || type == 'All' || type == 'ALL') {
-                 files = await fsPromises.readdir(ImageDestinationConstant.DEST, { recursive: true, encoding: 'utf-8' });
-                 files.forEach(file => {
-                     const new_path = file.replace(/\\/g, '/'); // Burada da \\ getiriyordu onları / ile değiştirdik
-                     if (new_path.split('/').length < 2) { return; } //  /xx/xx.png şeklinde olanları gostersin diye tek '/' olanları göstermemesını sagladık
-                     images.push({ image: `/${new_path}` });
-                 });
-             } else {
-                 files = await fsPromises.readdir(ImageDestinationConstant.DEST + type);
-                 files.forEach(file => {
-                     images.push({ image: `/${type}/${file}` });
-                 });
-             }
-             return { images };
-         } catch (err) {
-             console.error('Dosya okuma hatası:', err);
-             return { images: [] };
-         }
-     }*/
-
-    async uploadFile(fileDto: UploadFileDto, route: string, type: string) {
+    async uploadFile(fileDto: FileDto, route: string, type: string) {
         const findType = await this.findFileType(type);
         if (!findType) { return 404; }
         fileDto.type_id = findType.id;
@@ -84,14 +60,17 @@ export class FileService {
 
         if (!fs.existsSync(newPath)) { fs.mkdirSync(newPath, { recursive: true }); }
         fs.renameSync(file.path, `${newPath}/${file.filename}`);
-        return `/${route}/${file.filename}`
+        return `/${route}/${path}/${file.filename}`
     }
 
     async loadFiles() {
         const files = fs.readFileSync(FILES_PATH, 'utf8');
         this.files = JSON.parse(files);
-        const file_types = fs.readFileSync(FILES_TYPE_PATH, 'utf8');
-        this.file_type = JSON.parse(file_types);
+    }
+
+    async loadFileTypes() {
+        const file_type = fs.readFileSync(FILES_TYPE_PATH, 'utf8');
+        this.file_type = JSON.parse(file_type);
     }
 
     async saveFiles() {
@@ -104,40 +83,58 @@ export class FileService {
         return true;
     }
 
-    async autoIncrement() {
-        return Math.max(...this.files.map((file) => file.id)) + 1;
+    async autoIncrementFile() {
+        const id = Math.max(...this.files.map((file) => file.id)) + 1;
+        if (id < 1) return 1;
+        return id;
     }
 
-    async createFile(file: UploadFileDto) {
+    async autoIncrementFileType() {
+        const id = Math.max(...this.file_type.map((file_type) => file_type.id)) + 1;
+        if (id < 1) return 1;
+        return id;
+    }
+
+    async createFile(file: FileDto) {
+        file.id = await this.autoIncrementFile();
         this.files.push(file);
         this.saveFiles();
         return file;
     }
 
-    async createFileType(file_type: UploadFileDto) {
+    async createFileType(file_type: FileTypeDto) {
+        file_type.id = await this.autoIncrementFileType();
         this.file_type.push(file_type);
         this.saveFileType();
         return file_type;
     }
 
     async findFileById(id: number) {
-        return this.files.find((file) => file.id === id);
+        const file = this.files.find((file) => file.id === id);
+        if (!file) return { errorMessage: 'File not found' }
+        return file;
     }
 
     async findFileType(name: string) {
-        return this.file_type.find((file_type) => file_type.name === name);
+        const file_type = this.file_type.find((file_type) => file_type.name === name);
+        if (!file_type) return { errorMessage: 'File type not found' }
+        return file_type;
     }
 
     async getFiles() {
-        return this.files;
+        const files = this.files;
+        if (files.length < 1) return { errorMessage: 'Files not found' }
+        return files;
     }
 
     async getFileTypes() {
-        return this.file_type;
+        const file_types = this.file_type;
+        return file_types;
     }
 
     async getFilesByType(type_id: number) {
-        return this.files.filter((file) => file.type_id === type_id);
+        const files = this.files.filter((file) => file.type_id === type_id);
+        if (!files) return { errorMessage: 'Files not found' }
     }
 
     async convertTurkishWords(text: string) {
@@ -160,13 +157,27 @@ export class FileService {
         return result.toLowerCase();
     }
 
-    async fillEmptyWithUnderline(value: string) {
+    async fillEmpty(value: string) {
         const tr = await this.convertTurkishWords(value);
-        const slug = tr
+        const text = tr
             .toLowerCase()
             .replace(/[\s_-]+/g, '_')
             .trim();
-        return slug;
+        return text;
+    }
+
+    async getTypesRegexFormat() {
+        const file_types = await this.getFileTypes();
+        console.log(file_types)
+        const formats = []
+
+        for (let i = 0; i < file_types.length; i++) {
+            formats.push(file_types[i].name)
+        }
+        console.log(formats)
+        const regexFormat = new RegExp(`(${formats.join('|')})$`);
+        console.log(regexFormat)
+        return regexFormat;
     }
 
 }

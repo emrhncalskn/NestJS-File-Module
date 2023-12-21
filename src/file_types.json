@@ -1,22 +1,32 @@
 [
     {
         "id": 1,
-        "name": "jpg"
+        "name": "jpg",
+        "type": "image"
     },
     {
         "id": 2,
-        "name": "jpeg"
+        "name": "jpeg",
+        "type": "image"
     },
     {
         "id": 3,
-        "name": "png"
+        "name": "png",
+        "type": "image"
     },
     {
         "id": 4,
-        "name": "pdf"
+        "name": "pdf",
+        "type": "document"
     },
     {
         "id": 5,
-        "name": "docx"
+        "name": "docx",
+        "type": "document"
+    },
+    {
+        "id": 6,
+        "name": "xlsx",
+        "type": "document"
     }
 ]

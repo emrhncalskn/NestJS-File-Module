@@ -1,7 +1,7 @@
 import { HttpException } from "@nestjs/common";
 import { MulterOptions } from "@nestjs/platform-express/multer/interfaces/multer-options.interface";
-import { FileDestinationConstant, FileTypeConstant } from "./file.constant";
 import { diskStorage } from 'multer';
+import { FileDestinationConstant, FileTypeConstant } from "./file.constant";
 
 export const FileUploadOptions = (): MulterOptions => ({
     dest: FileDestinationConstant.DEST,
@@ -25,7 +25,7 @@ export const FileUploadOptions = (): MulterOptions => ({
 
 })
 
-export const FileApiOptions = () => ({  //swaggerda file upload gözükmesini sağlıyor
+export const FileApiOptions = () => ({ // Swagger Api Options
     schema: {
         type: 'object',
         properties: {

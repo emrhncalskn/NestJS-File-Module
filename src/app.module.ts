@@ -7,7 +7,7 @@ import { join } from 'path';
 
 @Module({
   imports: [FileModule, ServeStaticModule.forRoot({
-    rootPath: join(__dirname, '../..', 'assets/files/uploads'),
+    rootPath: join(__dirname, '..', 'assets/files/uploads'),
   }),],
   controllers: [AppController],
   providers: [AppService],
