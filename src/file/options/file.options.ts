@@ -13,7 +13,7 @@ export const FileUploadOptions = (): MulterOptions => ({
             destination: FileDestinationConstant.DEST,
             filename(req, file, cb) {
                 const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('')
-                return cb(null, `${randomName}` + '.' + `${file.mimetype.split('/')[1]}`)
+                return cb(null, `${randomName}` + '.' + `${file.originalname.split('.')[1]}`)
             },
         }),
     fileFilter: (req, file, cb) => {

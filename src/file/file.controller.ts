@@ -35,9 +35,9 @@ export class FileController {
     return await this.fileService.findFileById(id);
   }
 
-  @Get('bytype')
-  async getFileByType(@Param('type_id') type_id: number) {
-    return await this.fileService.getFilesByType(type_id);
+  @Get('bytype/:type')
+  async getFileByType(@Param('type') type: string) {
+    return await this.fileService.getFilesByType(type);
   }
 
   @Get('type/:name')
@@ -58,5 +58,10 @@ export class FileController {
   @Post('create/type')
   async createFileType(@Body() type: FileTypeDto) {
     return await this.fileService.createFileType(type);
+  }
+
+  @Get('delete/:id')
+  async deleteFile(@Param('id') id: number) {
+    return await this.fileService.deleteFile(id);
   }
 }

@@ -44,20 +44,21 @@ export class FileService {
     }
 
     async uploadFile(file: FileDto, route: string) {
-        const type = file.mimetype.split('/')[1];
+
+        const type = file.originalname.split('.')[1];
         file.alt = await this.fillEmpty(file.originalname);
 
         const findType = await this.findFileType(type);
         if (!findType) { return 404; }
 
-        let path: string;
-        findType.type == FileTypeConstant.IMAGE ? path = FileTypeConstant.IMAGE_PATH
-            : findType.type == FileTypeConstant.DOCUMENT ? path = FileTypeConstant.DOCUMENT_PATH : null;
+        let path: string; // if there is no type, the path will be the original file type, otherwise the path will be the type in the database.
+        findType.type == type ? path = findType.type : path = type;
 
 
         const pathFix = file.path.replace(/\\/g, '/'), oldPath = pathFix.replace(file.filename, '');
         const newPath = `${oldPath}${route}/${path}`;
-
+        file.mimetype = type;
+        file.type_id = findType.id;
         file.path = `/${route}/${path}/${file.filename}`;
         await this.createFile(file);
 
@@ -111,7 +112,7 @@ export class FileService {
     }
 
     async findFileById(id: number) {
-        const file = this.files.find((file) => file.id === id);
+        const file = this.files.find((file) => file.id === Number(id));
         if (!file) return { errorMessage: 'File not found' }
         return file;
     }
@@ -133,9 +134,25 @@ export class FileService {
         return file_types;
     }
 
-    async getFilesByType(type_id: number) {
-        const files = this.files.filter((file) => file.type_id === type_id);
-        if (!files) return { errorMessage: 'Files not found' }
+    async getFilesByType(type: string) {
+        const file_type = await this.findFileType(type);
+        if (!file_type) return { errorMessage: 'File type not found' }
+        const files = this.files.filter((file) => file.type_id === file_type.id);
+        if (files.length < 1) return { errorMessage: 'Files not found' }
+        return files;
+    }
+
+    async deleteFile(id: number) {
+        const file = await this.findFileById(id);
+        if (!file) return { errorMessage: 'File not found' }
+        const index = this.files.indexOf(file);
+        this.files.splice(index, 1);
+        this.saveFiles();
+
+        const path = file.path.replace(/\\/g, '/');
+        fs.unlinkSync(FileDestinationConstant.DEST + path);
+
+        return file;
     }
 
     async convertTurkishWords(text: string) {
