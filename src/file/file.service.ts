@@ -15,7 +15,6 @@ export class FileService {
 
     constructor() {
         this.loadFiles();
-        this.loadFileTypes();
     }
 
     async listFilePaths(path: string) {
@@ -27,7 +26,7 @@ export class FileService {
                 files = await fsPromises.readdir(FileDestinationConstant.DEST, { recursive: true, encoding: 'utf-8' });
                 files.forEach(file => {
                     const new_path = file.replace(/\\/g, '/');
-                    if (new_path.split('/').length < 2) { return; }
+                    if (new_path.split('/').length < 2) { return; } // Exclude files when listing all items ('all', 'All', or 'ALL'), only include directories.
                     documents.push({ file: `/${new_path}` });
                 });
             } else {
@@ -37,7 +36,6 @@ export class FileService {
                 });
             }
 
-
             return { documents };
         } catch (err) {
             console.error('File reading error:', err);
@@ -45,30 +43,33 @@ export class FileService {
         }
     }
 
-    async uploadFile(fileDto: FileDto, route: string, type: string) {
+    async uploadFile(file: FileDto, route: string) {
+        const type = file.mimetype.split('/')[1];
+        file.alt = await this.fillEmpty(file.originalname);
+
         const findType = await this.findFileType(type);
         if (!findType) { return 404; }
-        fileDto.type_id = findType.id;
 
-        let path = FileTypeConstant.DOCUMENT_PATH;
-        const isImage = FileTypeConstant.IMAGE.test(type);
-        if (isImage) { path = FileTypeConstant.IMAGE_PATH; }
-        const file = await this.createFile(fileDto);
+        let path: string;
+        findType.type == FileTypeConstant.IMAGE ? path = FileTypeConstant.IMAGE_PATH
+            : findType.type == FileTypeConstant.DOCUMENT ? path = FileTypeConstant.DOCUMENT_PATH : null;
+
 
         const pathFix = file.path.replace(/\\/g, '/'), oldPath = pathFix.replace(file.filename, '');
         const newPath = `${oldPath}${route}/${path}`;
 
+        file.path = `/${route}/${path}/${file.filename}`;
+        await this.createFile(file);
+
+
         if (!fs.existsSync(newPath)) { fs.mkdirSync(newPath, { recursive: true }); }
-        fs.renameSync(file.path, `${newPath}/${file.filename}`);
+        fs.renameSync(`${oldPath}${file.filename}`, `${newPath}/${file.filename}`);
         return `/${route}/${path}/${file.filename}`
     }
 
     async loadFiles() {
         const files = fs.readFileSync(FILES_PATH, 'utf8');
         this.files = JSON.parse(files);
-    }
-
-    async loadFileTypes() {
         const file_type = fs.readFileSync(FILES_TYPE_PATH, 'utf8');
         this.file_type = JSON.parse(file_type);
     }
@@ -164,20 +165,6 @@ export class FileService {
             .replace(/[\s_-]+/g, '_')
             .trim();
         return text;
-    }
-
-    async getTypesRegexFormat() {
-        const file_types = await this.getFileTypes();
-        console.log(file_types)
-        const formats = []
-
-        for (let i = 0; i < file_types.length; i++) {
-            formats.push(file_types[i].name)
-        }
-        console.log(formats)
-        const regexFormat = new RegExp(`(${formats.join('|')})$`);
-        console.log(regexFormat)
-        return regexFormat;
     }
 
 }

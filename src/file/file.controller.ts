@@ -11,19 +11,18 @@ import { ApiConsumes, ApiBody, ApiTags } from '@nestjs/swagger';
 export class FileController {
   constructor(private readonly fileService: FileService) { }
 
-  @Post('upload/file/:route')
+  @Post('upload/:route')
   @ApiConsumes('multipart/form-data')
   @ApiBody(FileApiOptions())
   @UseInterceptors(FileInterceptor('file', FileUploadOptions()))
-  async uploadImage(@Body() files: FileDto, @Param('route') route: string, @UploadedFile(new ParseFilePipe({
+  async uploadImage(@Param('route') route: string, @UploadedFile(new ParseFilePipe({
     validators: [
       new FileTypeValidator({ fileType: FileTypeConstant.FILE })]
   })) file: Express.Multer.File) {
-    const type = file.mimetype.split('/')[1]
-    files.filename = file.filename
-    files.path = file.path
-    files.alt = await this.fileService.fillEmpty(file.originalname)
-    return await this.fileService.uploadFile(files, route, type)
+
+    FileTypeConstant.setFileTypes(await this.fileService.getFileTypes());
+    return await this.fileService.uploadFile(file, route);
+
   }
 
   @Get()
@@ -31,24 +30,23 @@ export class FileController {
     return await this.fileService.getFiles();
   }
 
-  @Get('get/byid/:id')
+  @Get('byid/:id')
   async getFileById(@Param('id') id: number) {
     return await this.fileService.findFileById(id);
   }
 
-  @Get('get/bytype')
+  @Get('bytype')
   async getFileByType(@Param('type_id') type_id: number) {
     return await this.fileService.getFilesByType(type_id);
   }
 
-  @Get('get/type/:name')
+  @Get('type/:name')
   async getFileType(@Param('name') name: string) {
     return await this.fileService.findFileType(name);
   }
 
-  @Get('get/types')
+  @Get('types')
   async getTypes() {
-    await this.fileService.getTypesRegexFormat();
     return await this.fileService.getFileTypes();
   }
 

@@ -7,7 +7,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('NestJS File Module')
     .setDescription('github.com/emrhncalskn/NestJS-File-Module')
-    .setVersion('1.0')
+    .setVersion('1.2')
     .addBearerAuth()
     .build();
 
