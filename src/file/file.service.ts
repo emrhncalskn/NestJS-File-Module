@@ -168,7 +168,7 @@ export class FileService {
         const index = this.files.indexOf(file);
         this.files.splice(index, 1);
         this.saveFiles();
-        console.log(path)
+
         const isFileExists = await this.isFileExists(FileDestinationConstant.DEST + path);
         if (!isFileExists) msg = 'File not found on folder path but succesfully deleted anyway.';
 
